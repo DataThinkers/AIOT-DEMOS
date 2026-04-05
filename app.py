@@ -16,7 +16,8 @@ demo = st.sidebar.radio(
         "🏠 Smart Home (Alexa)",
         "🪖 Military Surveillance",
         "🔄 IoT vs AIoT Comparison",
-        "📡 IoT Architecture"
+        "📡 IoT Architecture",
+        "🚀 Kafka + Spark Pipeline" 
     ]
 )
 
@@ -462,3 +463,107 @@ elif demo == "📡 IoT Architecture":
     # FLOW
     # =========================================================
     st.info("🔄 Flow: Sensors → Gateway → Network → Cloud (AI) → User → Automation")
+
+
+elif demo == "🚀 Kafka + Spark Pipeline":
+
+    import streamlit as st
+    import random
+    import time
+    import pandas as pd
+
+    st.markdown("## 🚀 Kafka + Spark (Real Streaming with Buffer)")
+
+    st.write("Kafka buffers data between fast sensors and slower processing")
+
+    st.markdown("---")
+
+    # =========================
+    # SESSION STATE
+    # =========================
+    if "kafka_queue" not in st.session_state:
+        st.session_state.kafka_queue = []
+
+    if "processed" not in st.session_state:
+        st.session_state.processed = pd.DataFrame(
+            columns=["Temperature", "Result"]
+        )
+
+    if "running" not in st.session_state:
+        st.session_state.running = False
+
+    # =========================
+    # CONTROLS
+    # =========================
+    col1, col2 = st.columns(2)
+
+    if col1.button("▶ Start"):
+        st.session_state.running = True
+
+    if col2.button("⏹ Stop"):
+        st.session_state.running = False
+
+    # =========================
+    # PLACEHOLDER UI
+    # =========================
+    placeholder = st.empty()
+
+    # =========================
+    # STREAM LOOP
+    # =========================
+    while st.session_state.running:
+
+        # 🔥 FAST PRODUCER (Kafka input)
+        for _ in range(2):  # add multiple messages
+            temp = random.randint(20, 90)
+            st.session_state.kafka_queue.append(temp)
+
+        # 🧠 SLOW CONSUMER (Spark)
+        if st.session_state.kafka_queue:
+            data = st.session_state.kafka_queue.pop(0)
+
+            if data > 60:
+                result = "⚠️ Anomaly"
+            else:
+                result = "✅ Normal"
+
+            new_row = pd.DataFrame({
+                "Temperature": [data],
+                "Result": [result]
+            })
+
+            st.session_state.processed = pd.concat(
+                [st.session_state.processed, new_row],
+                ignore_index=True
+            )
+
+        # =========================
+        # UI UPDATE
+        # =========================
+        with placeholder.container():
+
+            colA, colB = st.columns(2)
+
+            with colA:
+                st.subheader("📡 Sensor + Kafka")
+
+                if st.session_state.kafka_queue:
+                    st.metric("Latest Incoming", st.session_state.kafka_queue[-1])
+
+                st.write("📦 Kafka Queue:")
+                st.write(st.session_state.kafka_queue)
+
+                st.write(f"📊 Queue Size: {len(st.session_state.kafka_queue)}")
+
+            with colB:
+                st.subheader("🧠 Spark Processing")
+
+                st.dataframe(
+                    st.session_state.processed.tail(5),
+                    use_container_width=True
+                )
+
+            st.markdown("---")
+            st.info("🔄 Flow: Sensor → Kafka (Buffer) → Spark")
+
+        time.sleep(1)
