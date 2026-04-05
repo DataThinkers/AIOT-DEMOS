@@ -229,6 +229,132 @@ elif demo == "🪖 Military Surveillance":
     st.markdown("---")
     st.write("🔄 Flow: Sensors → Data → ML Model → Threat Detection → Action")
 
+elif demo == "🔄 IoT vs AIoT Comparison":
+
+    from sklearn.ensemble import IsolationForest
+    import numpy as np
+    import pandas as pd
+
+    st.markdown("""
+    <div style="background: linear-gradient(90deg, #ff9966, #ff5e62);
+    padding:20px;border-radius:15px;color:white;text-align:center;
+    font-size:22px;font-weight:bold;">
+    🔄 Traditional IoT vs AIoT
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # =========================================================
+    # SENSOR INPUT
+    # =========================================================
+    st.subheader("📡 Sensor Input")
+
+    colA, colB = st.columns(2)
+
+    with colA:
+        temp = st.slider("🌡 Temperature", 0, 100, 50)
+
+    with colB:
+        vibration = st.slider("⚙️ Vibration", 0, 20, 5)
+
+    st.markdown("---")
+
+    # =========================================================
+    # TWO SYSTEMS
+    # =========================================================
+    col1, col2 = st.columns(2)
+
+    # -----------------------------
+    # TRADITIONAL IoT
+    # -----------------------------
+    with col1:
+        st.markdown("### ❌ Traditional IoT")
+
+        st.info("Monitoring Dashboard (Human Decision)")
+
+        # Dashboard view
+        st.metric("Temperature", temp)
+        st.metric("Vibration", vibration)
+
+        st.markdown("""
+        <div style="
+            background:#f4f4f4;
+            padding:15px;
+            border-radius:10px;
+            text-align:center;">
+            👨‍💻 Human observes data and decides action
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.warning("➡️ No automatic decision")
+
+    # -----------------------------
+    # AIoT SYSTEM
+    # -----------------------------
+    with col2:
+        st.markdown("### ✅ AIoT System")
+
+        st.info("AI-Based Automatic Decision")
+
+        # Train model
+        np.random.seed(42)
+        data = pd.DataFrame({
+            "Temp": np.random.normal(50, 10, 100),
+            "Vibration": np.random.normal(5, 2, 100)
+        })
+
+        model = IsolationForest(contamination=0.1)
+        model.fit(data)
+
+        pred = model.predict([[temp, vibration]])
+
+        if pred[0] == -1:
+            st.markdown("""
+            <div style="
+                background:#ff4d4d;
+                padding:20px;
+                border-radius:12px;
+                color:white;
+                text-align:center;
+                font-weight:bold;">
+                ⚠️ ANOMALY DETECTED<br>
+                🔧 Action: System triggers cooling
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="
+                background:#2ecc71;
+                padding:20px;
+                border-radius:12px;
+                color:white;
+                text-align:center;
+                font-weight:bold;">
+                ✅ NORMAL<br>
+                ⚙️ System continues operation
+            </div>
+            """, unsafe_allow_html=True)
+
+    # =========================================================
+    # FINAL MESSAGE
+    # =========================================================
+    st.markdown("---")
+
+    st.markdown("""
+    <div style="
+        background:#e6f2ff;
+        padding:20px;
+        border-radius:12px;
+        text-align:center;
+        font-size:18px;
+        font-weight:bold;">
+        IoT → Monitoring (Human in Loop) 📊<br><br>
+        AIoT → Intelligence + Automation 🧠⚙️
+    </div>
+    """, unsafe_allow_html=True)
+
+
 elif demo == "📡 IoT Architecture":
 
     import random
