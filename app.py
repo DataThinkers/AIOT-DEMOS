@@ -17,7 +17,8 @@ demo = st.sidebar.radio(
         "🪖 Military Surveillance",
         "🔄 IoT vs AIoT Comparison",
         "📡 IoT Architecture",
-        "🚀 Kafka + Spark Pipeline" 
+        "🚀 Kafka + Spark Pipeline",
+        "⚡ Edge vs Cloud Decision"
     ]
 )
 
@@ -565,5 +566,138 @@ elif demo == "🚀 Kafka + Spark Pipeline":
 
             st.markdown("---")
             st.info("🔄 Flow: Sensor → Kafka (Buffer) → Spark")
+
+        time.sleep(1)
+
+
+elif demo == "⚡ Edge vs Cloud Decision":
+
+    import streamlit as st
+    import random
+    import time
+    import pandas as pd
+    from datetime import datetime
+
+    st.markdown("## ⚡ Edge vs Cloud + Contextualization (Smart Decision)")
+
+    st.write("System decides based on urgency, not just raw values")
+
+    st.markdown("---")
+
+    # =========================
+    # SESSION STATE
+    # =========================
+    if "logs" not in st.session_state:
+        st.session_state.logs = pd.DataFrame(
+            columns=["Time", "Device", "Location", "Temperature", "Urgency", "Decision", "Latency"]
+        )
+
+    if "running" not in st.session_state:
+        st.session_state.running = False
+
+    # =========================
+    # CONTROLS
+    # =========================
+    col1, col2 = st.columns(2)
+
+    if col1.button("▶ Start"):
+        st.session_state.running = True
+
+    if col2.button("⏹ Stop"):
+        st.session_state.running = False
+
+    placeholder = st.empty()
+
+    # =========================
+    # STREAM LOOP
+    # =========================
+    while st.session_state.running:
+
+        # RAW DATA
+        temp = random.randint(20, 90)
+
+        # =========================
+        # CONTEXTUALIZATION
+        # =========================
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        device = "Sensor-A"
+        location = "Factory Floor"
+
+        # =========================
+        # URGENCY LOGIC (NEW)
+        # =========================
+        if temp > 75:
+            urgency = "High"
+        elif temp > 55:
+            urgency = "Medium"
+        else:
+            urgency = "Low"
+
+        # =========================
+        # DECISION BASED ON URGENCY
+        # =========================
+        if urgency == "High":
+            decision = "⚡ Edge"
+            latency = "1 ms"
+            action = "🔥 Emergency Cooling Activated"
+        else:
+            decision = "☁️ Cloud"
+            latency = "200 ms"
+            action = "📊 Sent for Analytics"
+
+        # =========================
+        # STORE DATA
+        # =========================
+        new_row = pd.DataFrame({
+            "Time": [timestamp],
+            "Device": [device],
+            "Location": [location],
+            "Temperature": [temp],
+            "Urgency": [urgency],
+            "Decision": [decision],
+            "Latency": [latency]
+        })
+
+        st.session_state.logs = pd.concat(
+            [st.session_state.logs, new_row],
+            ignore_index=True
+        )
+
+        # =========================
+        # UI UPDATE
+        # =========================
+        with placeholder.container():
+
+            colA, colB = st.columns(2)
+
+            with colA:
+                st.subheader("📡 Sensor Data")
+                st.metric("Temperature", temp)
+
+            with colB:
+                st.subheader("🧠 Smart Decision")
+                st.write(f"Urgency: {urgency}")
+                st.write(f"Decision: {decision}")
+                st.write(f"Latency: {latency}")
+
+            st.markdown("---")
+
+            # Show reason clearly
+            st.info(f"📌 Reason: {urgency} urgency data → processed at {decision}")
+
+            if urgency == "High":
+                st.error(action)
+            else:
+                st.success(action)
+
+            st.markdown("---")
+
+            st.subheader("📊 Contextualized Data (AI-Ready)")
+            st.dataframe(
+                st.session_state.logs.tail(10),
+                use_container_width=True
+            )
+
+            st.info("🔄 Flow: Sensor → Context → Decision → Edge/Cloud → Action")
 
         time.sleep(1)
