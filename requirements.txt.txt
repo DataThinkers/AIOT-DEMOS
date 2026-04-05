@@ -1,0 +1,13 @@
+streamlit
+pandas
+numpy
+scikit-learn
+
+# AI Agent / LLM Layer
+langchain
+langchain-community
+openai
+
+# Optional (very useful)
+python-dotenv
+tiktoken
