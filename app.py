@@ -895,9 +895,6 @@ elif demo == "📊 Batch vs Streaming":
     if "batch_result" not in st.session_state:
         st.session_state.batch_result = []
 
-    if "last_batch_result" not in st.session_state:
-        st.session_state.last_batch_result = None
-
     if "running" not in st.session_state:
         st.session_state.running = False
 
@@ -926,7 +923,7 @@ elif demo == "📊 Batch vs Streaming":
         st.session_state.stream_data.append(temp)
 
         # =========================
-        # STREAMING
+        # STREAMING (REAL-TIME)
         # =========================
         if temp > 70:
             stream_result = "⚠️ Alert"
@@ -934,8 +931,10 @@ elif demo == "📊 Batch vs Streaming":
             stream_result = "✅ Normal"
 
         # =========================
-        # BATCH (SIZE = 10)
+        # BATCH (ONLY AFTER 10 VALUES)
         # =========================
+        batch_result = None  # reset every loop
+
         if len(st.session_state.batch_data) == 10:
 
             avg_temp = sum(st.session_state.batch_data) / 10
@@ -945,10 +944,9 @@ elif demo == "📊 Batch vs Streaming":
             else:
                 batch_result = "✅ Normal (Batch)"
 
-            st.session_state.last_batch_result = batch_result
             st.session_state.batch_result.append(batch_result)
 
-            # reset batch
+            # clear batch
             st.session_state.batch_data = []
 
         # =========================
@@ -969,14 +967,15 @@ elif demo == "📊 Batch vs Streaming":
             with colB:
                 st.subheader("🗂️ Batch Processing (Size = 10)")
 
-                st.write("Collected Data:", st.session_state.batch_data)
-
                 progress = len(st.session_state.batch_data)
 
                 st.progress(progress / 10)
 
-                if st.session_state.last_batch_result:
-                    st.success(f"Result: {st.session_state.last_batch_result}")
+                st.write("Collected Data:", st.session_state.batch_data)
+
+                if batch_result:
+                    st.warning("Batch Completed ✅")
+                    st.success(f"Result: {batch_result}")
                 else:
                     st.info(f"Waiting... ({progress}/10)")
 
