@@ -19,7 +19,8 @@ demo = st.sidebar.radio(
         "📡 IoT Architecture",
         "🚀 Kafka + Spark Pipeline",
         "⚡ Edge vs Cloud Decision",
-        "🔄 AIoT Data Flow"
+        "🔄 AIoT Data Flow",
+        "📊 Batch vs Streaming"
     ]
 )
 
@@ -869,3 +870,119 @@ elif demo == "🔄 AIoT Data Flow":
 🔄 Flow:
 Sensor → Edge → Gateway → Ingestion → Storage → Model → Decision → Actuator
 """)
+    
+elif demo == "📊 Batch vs Streaming":
+
+    import streamlit as st
+    import random
+    import time
+
+    st.markdown("## 📊 Batch vs Streaming Processing Demo")
+
+    st.write("Compare how data is processed in Batch vs Streaming")
+
+    st.markdown("---")
+
+    # =========================
+    # STATE
+    # =========================
+    if "batch_data" not in st.session_state:
+        st.session_state.batch_data = []
+
+    if "stream_data" not in st.session_state:
+        st.session_state.stream_data = []
+
+    if "batch_result" not in st.session_state:
+        st.session_state.batch_result = []
+
+    if "last_batch_result" not in st.session_state:
+        st.session_state.last_batch_result = None
+
+    if "running" not in st.session_state:
+        st.session_state.running = False
+
+    # =========================
+    # CONTROLS
+    # =========================
+    col1, col2 = st.columns(2)
+
+    if col1.button("▶ Start"):
+        st.session_state.running = True
+
+    if col2.button("⏹ Stop"):
+        st.session_state.running = False
+
+    placeholder = st.empty()
+
+    # =========================
+    # LOOP
+    # =========================
+    while st.session_state.running:
+
+        temp = random.randint(20, 90)
+
+        # Add data
+        st.session_state.batch_data.append(temp)
+        st.session_state.stream_data.append(temp)
+
+        # =========================
+        # STREAMING
+        # =========================
+        if temp > 70:
+            stream_result = "⚠️ Alert"
+        else:
+            stream_result = "✅ Normal"
+
+        # =========================
+        # BATCH (SIZE = 10)
+        # =========================
+        if len(st.session_state.batch_data) == 10:
+
+            avg_temp = sum(st.session_state.batch_data) / 10
+
+            if avg_temp > 70:
+                batch_result = "⚠️ Alert (Batch)"
+            else:
+                batch_result = "✅ Normal (Batch)"
+
+            st.session_state.last_batch_result = batch_result
+            st.session_state.batch_result.append(batch_result)
+
+            # reset batch
+            st.session_state.batch_data = []
+
+        # =========================
+        # UI
+        # =========================
+        with placeholder.container():
+
+            colA, colB = st.columns(2)
+
+            # STREAMING
+            with colA:
+                st.subheader("⚡ Streaming (Real-Time)")
+                st.metric("Latest Temp", temp)
+                st.write("Result:", stream_result)
+                st.success("Processed instantly (Low latency)")
+
+            # BATCH
+            with colB:
+                st.subheader("🗂️ Batch Processing (Size = 10)")
+
+                st.write("Collected Data:", st.session_state.batch_data)
+
+                progress = len(st.session_state.batch_data)
+
+                st.progress(progress / 10)
+
+                if st.session_state.last_batch_result:
+                    st.success(f"Result: {st.session_state.last_batch_result}")
+                else:
+                    st.info(f"Waiting... ({progress}/10)")
+
+            st.markdown("---")
+
+            st.subheader("📊 Batch Results History")
+            st.write(st.session_state.batch_result[-5:])
+
+        time.sleep(1)
