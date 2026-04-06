@@ -18,7 +18,8 @@ demo = st.sidebar.radio(
         "🔄 IoT vs AIoT Comparison",
         "📡 IoT Architecture",
         "🚀 Kafka + Spark Pipeline",
-        "⚡ Edge vs Cloud Decision"
+        "⚡ Edge vs Cloud Decision",
+        "🔄 AIoT Data Flow"
     ]
 )
 
@@ -701,3 +702,170 @@ elif demo == "⚡ Edge vs Cloud Decision":
             st.info("🔄 Flow: Sensor → Context → Decision → Edge/Cloud → Action")
 
         time.sleep(1)
+
+elif demo == "🔄 AIoT Data Flow":
+
+    import streamlit as st
+    import random
+    import time
+    import pandas as pd
+    from datetime import datetime
+
+    st.markdown("## 🔄 AIoT Data Flow (Exact Pipeline Simulation)")
+
+    st.markdown("---")
+
+    # =========================
+    # STATE
+    # =========================
+    if "stream" not in st.session_state:
+        st.session_state.stream = []
+
+    if "storage" not in st.session_state:
+        st.session_state.storage = []
+
+    if "logs" not in st.session_state:
+        st.session_state.logs = []
+
+    if "running" not in st.session_state:
+        st.session_state.running = False
+
+    # =========================
+    # CONTROLS
+    # =========================
+    col1, col2 = st.columns(2)
+
+    if col1.button("▶ Start"):
+        st.session_state.running = True
+
+    if col2.button("⏹ Stop"):
+        st.session_state.running = False
+
+    placeholder = st.empty()
+
+    # =========================
+    # LOOP
+    # =========================
+    while st.session_state.running:
+
+        temp = random.randint(20, 90)
+
+        now = datetime.now()
+        date_str = now.strftime("%Y-%m-%d")
+        time_str = now.strftime("%H:%M:%S")
+
+        # 📡 SENSOR
+        sensor = {
+            "Date": date_str,
+            "Time": time_str,
+            "Temp": temp
+        }
+
+        # ⚡ EDGE PROCESSING (Filters / Rules)
+        edge = "Filtered (High Temp)" if temp > 75 else "Normal"
+
+        # 📶 GATEWAY / NETWORK
+        gateway = "Data Transmitted"
+
+        # 🚚 INGESTION / STREAM
+        st.session_state.stream.append(sensor)
+
+        # 💾 STORAGE (Time-Series)
+        st.session_state.storage.append(sensor)
+
+        # 🧠 MODEL SERVING (Rules/ML/DL)
+        model = "⚠️ Anomaly Detected" if temp > 70 else "✅ Normal"
+
+        # ⚙️ DECISION (API)
+        decision = "Cooling ON" if temp > 70 else "No Action"
+        api = f"API: {decision}"
+
+        # 🔔 ACTUATOR / ALERT
+        actuator = "🔥 Cooling Activated" if temp > 70 else "✅ System Stable"
+
+        # LOG
+        st.session_state.logs.append({
+            "Date": date_str,
+            "Time": time_str,
+            "Temp": temp,
+            "Model": model,
+            "Decision": decision
+        })
+
+        # =========================
+        # UI (MATCH BLOCKS)
+        # =========================
+        with placeholder.container():
+
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                st.subheader("📡 Sensor")
+                st.metric("Temp", temp)
+
+            with col2:
+                st.subheader("⚡ Edge Processing")
+                st.write(edge)
+
+            with col3:
+                st.subheader("📶 Gateway/Network")
+                st.write(gateway)
+
+            with col4:
+                st.subheader("🚚 Ingestion/Stream")
+                st.write(st.session_state.stream[-3:])
+
+            st.markdown("---")
+
+            col5, col6, col7 = st.columns(3)
+
+            with col5:
+                st.subheader("💾 Storage (Time-Series)")
+                st.write(len(st.session_state.storage), "records")
+
+            with col6:
+                st.subheader("🧠 Model Serving")
+                st.write(model)
+
+            with col7:
+                st.subheader("⚙️ Decision (API)")
+                st.write(api)
+
+            st.markdown("---")
+
+            st.subheader("🔔 Actuator / Alert")
+
+            if temp > 70:
+                st.error(actuator)
+            else:
+                st.success(actuator)
+
+            st.markdown("---")
+
+            st.subheader("📊 Time-Series Data")
+            st.dataframe(pd.DataFrame(st.session_state.logs).tail(5))
+
+        time.sleep(1)
+
+    # =========================
+    # FINAL EXPLANATION
+    # =========================
+    st.markdown("---")
+
+    st.subheader("📘 Explanation (As per AIoT Flow)")
+
+    st.markdown("""
+**📡 Sensor** → Collects real-world data  
+**⚡ Edge Processing** → Applies filters/rules  
+**📶 Gateway/Network** → Transfers data  
+**🚚 Ingestion/Stream** → Streams data (Kafka-like)  
+**💾 Storage** → Stores time-series data  
+**🧠 Model Serving** → AI detects patterns/anomalies  
+**⚙️ Decision (API)** → Generates action decision  
+**🔔 Actuator/Alert** → Executes action automatically  
+""")
+
+    st.info("""
+🔄 Flow:
+Sensor → Edge → Gateway → Ingestion → Storage → Model → Decision → Actuator
+""")
