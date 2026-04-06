@@ -20,7 +20,8 @@ demo = st.sidebar.radio(
         "🚀 Kafka + Spark Pipeline",
         "⚡ Edge vs Cloud Decision",
         "🔄 AIoT Data Flow",
-        "📊 Batch vs Streaming"
+        "📊 Batch vs Streaming",
+        "🧹 Data Cleaning Pipeline"
     ]
 )
 
@@ -985,3 +986,172 @@ elif demo == "📊 Batch vs Streaming":
             st.write(st.session_state.batch_result[-5:])
 
         time.sleep(1)
+
+
+elif demo == "🧹 Data Cleaning Pipeline":
+
+    import streamlit as st
+    import pandas as pd
+
+    st.markdown("## 🧹 Data Cleaning Pipeline (Step-by-Step Tables)")
+
+    st.markdown("---")
+
+    # =========================
+    # STATE
+    # =========================
+    if "step" not in st.session_state:
+        st.session_state.step = 0
+
+    if "raw" not in st.session_state:
+        st.session_state.raw = pd.DataFrame({
+            "Temperature": [25, 27, None, 30, 999, 28, 26, None, 27, -20],
+            "Humidity": [60, None, 58, 62, 65, None, 59, 61, 300, 57],
+            "Pressure": [101, 102, 103, None, 5000, 101, 102, 103, None, 100]
+        })
+
+    # =========================
+    # RAW DATA
+    # =========================
+    st.subheader("📊 Raw Data")
+    st.dataframe(st.session_state.raw)
+
+    st.markdown("---")
+
+    # =========================
+    # STEP 1: MISSING VALUES
+    # =========================
+    if st.session_state.step >= 1:
+        step1 = st.session_state.raw.fillna(st.session_state.raw.mean())
+        st.subheader("1️⃣ Missing Values Handled")
+        st.dataframe(step1)
+
+    if st.session_state.step == 0:
+        if st.button("1️⃣ Handle Missing Values"):
+            st.session_state.step = 1
+            st.rerun()
+
+    # =========================
+    # STEP 2: OUTLIERS
+    # =========================
+    if st.session_state.step >= 2:
+        step2 = step1[
+            (step1["Temperature"] >= 0) & (step1["Temperature"] <= 100)
+        ]
+        step2 = step2[
+            (step2["Humidity"] >= 0) & (step2["Humidity"] <= 100)
+        ]
+        step2 = step2[
+            (step2["Pressure"] >= 90) & (step2["Pressure"] <= 110)
+        ]
+
+        st.subheader("2️⃣ Outliers Removed")
+        st.dataframe(step2)
+
+    if st.session_state.step == 1:
+        if st.button("2️⃣ Remove Outliers"):
+            st.session_state.step = 2
+            st.rerun()
+
+    # =========================
+    # STEP 3: NOISE REDUCTION
+    # =========================
+    if st.session_state.step >= 3:
+        step3 = step2.copy()
+        step3["Temperature"] = step3["Temperature"].rolling(2).mean().bfill()
+
+        st.subheader("3️⃣ Noise Reduced (Smoothing)")
+        st.dataframe(step3)
+
+    if st.session_state.step == 2:
+        if st.button("3️⃣ Noise Reduction"):
+            st.session_state.step = 3
+            st.rerun()
+
+    # =========================
+    # STEP 4: ERROR CORRECTION
+    # =========================
+    if st.session_state.step >= 4:
+        step4 = step3.copy()
+        step4["Humidity"] = step4["Humidity"].apply(
+            lambda x: min(max(x, 0), 100)
+        )
+
+        st.subheader("4️⃣ Error Corrected")
+        st.dataframe(step4)
+
+    if st.session_state.step == 3:
+        if st.button("4️⃣ Error Correction"):
+            st.session_state.step = 4
+            st.rerun()
+
+    # =========================
+    # STEP 5: DATA REDUCTION
+    # =========================
+    if st.session_state.step >= 5:
+        step5 = step4.copy()
+
+        before = len(step5)
+        step5 = step5.drop_duplicates()
+        after = len(step5)
+
+        st.subheader("5️⃣ Data Reduction")
+        st.dataframe(step5)
+        st.info(f"Removed {before - after} duplicate rows")
+
+        st.markdown("""
+👉 Removes redundant/duplicate data  
+👉 Saves storage and improves efficiency  
+""")
+
+    if st.session_state.step == 4:
+        if st.button("5️⃣ Data Reduction"):
+            st.session_state.step = 5
+            st.rerun()
+
+    # =========================
+    # STEP 6: STANDARDIZATION
+    # =========================
+    if st.session_state.step >= 6:
+        step6 = (step5 - step5.mean()) / step5.std(ddof=0)
+
+        st.subheader("6️⃣ Standardized Data (Mean = 0, Std = 1)")
+        st.dataframe(step6)
+
+        st.markdown("### 📊 Statistics")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.write("Mean (≈ 0):")
+            st.write(step6.mean())
+
+        with col2:
+            st.write("Std Dev (≈ 1):")
+            st.write(step6.std(ddof=0))
+
+        st.info("Note: Small dataset → values may be close to 0 and 1, not exact.")
+
+        st.success("✅ Data is fully cleaned and ML-ready")
+
+    if st.session_state.step == 5:
+        if st.button("6️⃣ Standardization"):
+            st.session_state.step = 6
+            st.rerun()
+
+    # =========================
+    # RESET
+    # =========================
+    st.markdown("---")
+
+    if st.button("🔄 Reset"):
+        st.session_state.step = 0
+        st.rerun()
+
+    # =========================
+    # FLOW
+    # =========================
+    st.info("""
+🔄 Pipeline Flow:
+Raw → Missing → Outliers → Noise → Error → Reduction → Standardization
+""")
