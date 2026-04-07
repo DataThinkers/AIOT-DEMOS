@@ -1738,8 +1738,7 @@ elif demo == "🖼️ Fault Detection from Image (LLM)":
 
     import streamlit as st
     import base64
-    from langchain_openai import ChatOpenAI
-    from langchain_core.prompts import ChatPromptTemplate
+    from openai import OpenAI
 
     st.markdown("## 🖼️ Fault Detection from Image (AI Vision)")
     st.markdown("---")
@@ -1751,25 +1750,22 @@ elif demo == "🖼️ Fault Detection from Image (LLM)":
 
     if not api_key:
         st.warning("⚠️ Please enter your OpenAI API Key to continue.")
-        st.stop()   # ✅ prevents execution below
+        st.stop()
+
+    # =========================
+    # INIT CLIENT
+    # =========================
+    try:
+        client = OpenAI(api_key=api_key)
+    except Exception as e:
+        st.error(f"❌ API Initialization Error: {e}")
+        st.stop()
 
     # =========================
     # IMAGE ENCODER
     # =========================
     def encode_image(img):
         return base64.b64encode(img.read()).decode()
-
-    # =========================
-    # MODEL INIT (SAFE)
-    # =========================
-    try:
-        llm = ChatOpenAI(
-            model="gpt-4o",
-            api_key=api_key
-        )
-    except Exception as e:
-        st.error(f"❌ Model initialization failed: {e}")
-        st.stop()
 
     # =========================
     # UI INPUT
@@ -1795,51 +1791,50 @@ elif demo == "🖼️ Fault Detection from Image (LLM)":
     # =========================
     if image_file and equipment:
 
-        image = encode_image(image_file)
-
-        prompt = ChatPromptTemplate.from_messages([
-            ("system",
-             "You are a technical inspection assistant specialized in visual fault detection."),
-
-            ("human", [
-                {
-                    "type": "text",
-                    "text": (
-                        "User-provided information:\n"
-                        "- Equipment / Device: {equipment}\n"
-                        "- Expected operating condition: {expected_state}\n"
-                        "- Observed issue (if any): {observed_issue}\n\n"
-                        "Tasks:\n"
-                        "1. Identify what machine, device, or system is visible\n"
-                        "2. Detect visible faults or abnormalities\n"
-                        "3. Compare with expected condition\n"
-                        "4. Classify severity: Low / Medium / High\n"
-                        "5. Suggest corrective action\n\n"
-                        "Only use visual evidence."
-                    )
-                },
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{image}"
-                    }
-                }
-            ])
-        ])
-
-        chain = prompt | llm
+        image_base64 = encode_image(image_file)
 
         try:
             with st.spinner("🔍 Analyzing image..."):
-                response = chain.invoke({
-                    "equipment": equipment,
-                    "expected_state": expected_state,
-                    "observed_issue": observed_issue or "Not provided"
-                })
+
+                response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a technical inspection assistant specialized in visual fault detection."
+                        },
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": (
+                                        f"Equipment: {equipment}\n"
+                                        f"Expected Condition: {expected_state}\n"
+                                        f"Observed Issue: {observed_issue or 'Not provided'}\n\n"
+                                        "Tasks:\n"
+                                        "1. Identify the device\n"
+                                        "2. Detect visible faults or abnormalities\n"
+                                        "3. Compare with expected condition\n"
+                                        "4. Classify severity (Low / Medium / High)\n"
+                                        "5. Suggest corrective action\n\n"
+                                        "Only use visual evidence."
+                                    )
+                                },
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/jpeg;base64,{image_base64}"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                )
 
             st.subheader("📊 Fault Analysis Result")
             st.success("✅ Analysis Completed")
-            st.write(response.content)
+            st.write(response.choices[0].message.content)
 
         except Exception as e:
             st.error(f"❌ Error during analysis: {e}")
