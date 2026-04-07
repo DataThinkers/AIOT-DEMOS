@@ -25,7 +25,8 @@ demo = st.sidebar.radio(
         "🔧 Predict Equipment Failure",
         "⚡ Energy Consumption Forecasting",
         "⚙️ Device State Classification",
-        "🚨 Anomaly Detection (AIoT)"
+        "🚨 Anomaly Detection (AIoT)",
+        "🧠 Predict & Explain Defect (XAI)"
     ]
 )
 
@@ -1615,3 +1616,125 @@ elif demo == "🚨 Anomaly Detection (AIoT)":
             st.dataframe(pd.DataFrame(st.session_state.data).tail(6))
 
         time.sleep(1)
+
+elif demo == "🧠 Predict & Explain Defect (XAI)":
+
+    import streamlit as st
+    import pandas as pd
+    import numpy as np
+    from sklearn.ensemble import RandomForestClassifier
+
+    st.markdown("## 🧠 Predict & Explain Steel Defect (Explainable AI)")
+
+    st.markdown("---")
+
+    # =========================
+    # IMPROVED TRAINING DATA
+    # =========================
+    data = pd.DataFrame({
+        "Temperature": [700,720,740,760,780,800,820,840,860,880,900],
+        "Pressure":    [30,32,34,36,38,40,42,44,46,48,50],
+        "Speed":       [100,105,110,115,120,125,130,135,140,145,150],
+        "Defect": [
+            "Normal",
+            "Scratch",
+            "Inclusion",
+            "Normal",
+            "Scratch",
+            "Inclusion",
+            "Crack",
+            "Crack",
+            "Surface Dent",
+            "Surface Dent",
+            "Crack"
+        ]
+    })
+
+    X = data[["Temperature", "Pressure", "Speed"]]
+    y = data["Defect"]
+
+    model = RandomForestClassifier(random_state=42)
+    model.fit(X, y)
+
+    st.success("✅ Model Trained (Balanced Data)")
+
+    # =========================
+    # INPUT
+    # =========================
+    st.subheader("📡 Input Machine Data")
+
+    temp = st.slider("Temperature", 700, 950, 800)
+    pressure = st.slider("Pressure", 30, 55, 40)
+    speed = st.slider("Speed", 100, 150, 120)
+
+    # =========================
+    # PREDICT
+    # =========================
+    if st.button("🔍 Predict & Explain"):
+
+        input_data = np.array([[temp, pressure, speed]])
+        prediction = model.predict(input_data)[0]
+
+        st.markdown("### 🧠 Prediction")
+        st.success(f"Detected Defect: **{prediction}**")
+
+        # =========================
+        # FEATURE IMPORTANCE
+        # =========================
+        importance = model.feature_importances_
+        features = ["Temperature", "Pressure", "Speed"]
+
+        imp_df = pd.DataFrame({
+            "Feature": features,
+            "Importance": importance
+        }).sort_values(by="Importance", ascending=False)
+
+        st.markdown("### 📊 Feature Influence")
+        st.dataframe(imp_df)
+
+        # =========================
+        # MODEL-BASED EXPLANATION
+        # =========================
+        st.markdown("### 💡 AI Explanation")
+
+        mean_vals = X.mean()
+        input_vals = [temp, pressure, speed]
+
+        reasons = []
+
+        # Detect deviations
+        for i, f in enumerate(features):
+            diff = input_vals[i] - mean_vals[i]
+
+            if abs(diff) > 15:
+                if diff > 0:
+                    reasons.append(f"{f.lower()} is higher than normal")
+                else:
+                    reasons.append(f"{f.lower()} is lower than normal")
+
+        # Ensure multi-feature explanation
+        if len(reasons) < 2:
+            sorted_idx = np.argsort(importance)[::-1]
+            for idx in sorted_idx:
+                f = features[idx]
+                reasons.append(f"{f.lower()} influenced the decision")
+                if len(reasons) >= 2:
+                    break
+
+        # Defect-specific interpretation
+        impact_map = {
+            "Crack": "This combination increases the risk of structural cracks.",
+            "Scratch": "This may result in surface damage during processing.",
+            "Inclusion": "This indicates possible internal impurities in the material.",
+            "Surface Dent": "This can cause physical deformation on the surface.",
+            "Normal": "All conditions are within acceptable operating limits."
+        }
+
+        explanation_text = (
+            "The model predicted this defect because "
+            + ", ".join(reasons[:3])
+            + ". "
+            + impact_map.get(prediction)
+        )
+
+        st.info(explanation_text)
