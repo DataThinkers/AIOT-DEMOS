@@ -22,7 +22,8 @@ demo = st.sidebar.radio(
         "🔄 AIoT Data Flow",
         "📊 Batch vs Streaming",
         "🧹 Data Cleaning Pipeline",
-        "🔧 Predict Equipment Failure"
+        "🔧 Predict Equipment Failure",
+        "⚡ Energy Consumption Forecasting"
     ]
 )
 
@@ -1281,6 +1282,106 @@ elif demo == "🔧 Predict Equipment Failure":
             st.markdown("---")
 
             st.subheader("📊 Monitoring History")
+            st.dataframe(pd.DataFrame(st.session_state.data).tail(6))
+
+        time.sleep(1)
+elif demo == "⚡ Energy Consumption Forecasting":
+
+    import streamlit as st
+    import pandas as pd
+    import numpy as np
+    import random
+    import time
+    from sklearn.linear_model import LinearRegression
+
+    st.markdown("## ⚡ Energy Consumption Forecasting (AIoT)")
+
+    st.write("Predicting energy usage using temperature & time")
+
+    st.markdown("---")
+
+    # =========================
+    # TRAINING DATA
+    # =========================
+    train_data = pd.DataFrame({
+        "Temperature": [20, 22, 25, 28, 30, 32, 35, 38],
+        "Hour":        [6, 9, 12, 15, 18, 20, 22, 23],
+        "Energy":      [100, 120, 150, 180, 220, 260, 300, 320]
+    })
+
+    X = train_data[["Temperature", "Hour"]]
+    y = train_data["Energy"]
+
+    model = LinearRegression()
+    model.fit(X, y)
+
+    st.success("✅ Model Trained on Historical Data")
+
+    # =========================
+    # STATE
+    # =========================
+    if "data" not in st.session_state:
+        st.session_state.data = []
+
+    if "running" not in st.session_state:
+        st.session_state.running = False
+
+    col1, col2 = st.columns(2)
+
+    if col1.button("▶ Start Forecasting"):
+        st.session_state.running = True
+
+    if col2.button("⏹ Stop"):
+        st.session_state.running = False
+
+    placeholder = st.empty()
+
+    # =========================
+    # LOOP
+    # =========================
+    while st.session_state.running:
+
+        # Simulated real-world input
+        temp = random.randint(20, 40)
+        hour = random.randint(0, 23)
+
+        input_data = np.array([[temp, hour]])
+
+        predicted_energy = model.predict(input_data)[0]
+
+        # Store
+        st.session_state.data.append({
+            "Temperature": temp,
+            "Hour": hour,
+            "Predicted Energy": int(predicted_energy)
+        })
+
+        # =========================
+        # UI
+        # =========================
+        with placeholder.container():
+
+            colA, colB = st.columns(2)
+
+            with colA:
+                st.subheader("📡 Input Data")
+                st.metric("Temperature (°C)", temp)
+                st.metric("Hour", hour)
+
+            with colB:
+                st.subheader("🧠 Forecast Output")
+                st.metric("Predicted Energy", f"{int(predicted_energy)} kWh")
+
+                if predicted_energy > 250:
+                    st.error("🔴 High Energy Demand")
+                elif predicted_energy > 150:
+                    st.warning("🟠 Moderate Demand")
+                else:
+                    st.success("🟢 Low Demand")
+
+            st.markdown("---")
+
+            st.subheader("📊 Forecast History")
             st.dataframe(pd.DataFrame(st.session_state.data).tail(6))
 
         time.sleep(1)
