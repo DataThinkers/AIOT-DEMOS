@@ -26,7 +26,8 @@ demo = st.sidebar.radio(
         "⚡ Energy Consumption Forecasting",
         "⚙️ Device State Classification",
         "🚨 Anomaly Detection (AIoT)",
-        "🧠 Predict & Explain Defect (XAI)"
+        "🧠 Predict & Explain Defect (XAI)",
+        "🖼️ Fault Detection from Image (LLM)"
     ]
 )
 
@@ -1625,28 +1626,18 @@ elif demo == "🧠 Predict & Explain Defect (XAI)":
     from sklearn.ensemble import RandomForestClassifier
 
     st.markdown("## 🧠 Predict & Explain Steel Defect (Explainable AI)")
-
     st.markdown("---")
 
     # =========================
-    # IMPROVED TRAINING DATA
+    # TRAINING DATA
     # =========================
     data = pd.DataFrame({
         "Temperature": [700,720,740,760,780,800,820,840,860,880,900],
         "Pressure":    [30,32,34,36,38,40,42,44,46,48,50],
         "Speed":       [100,105,110,115,120,125,130,135,140,145,150],
         "Defect": [
-            "Normal",
-            "Scratch",
-            "Inclusion",
-            "Normal",
-            "Scratch",
-            "Inclusion",
-            "Crack",
-            "Crack",
-            "Surface Dent",
-            "Surface Dent",
-            "Crack"
+            "Normal","Scratch","Inclusion","Normal","Scratch",
+            "Inclusion","Crack","Crack","Surface Dent","Surface Dent","Crack"
         ]
     })
 
@@ -1672,8 +1663,14 @@ elif demo == "🧠 Predict & Explain Defect (XAI)":
     # =========================
     if st.button("🔍 Predict & Explain"):
 
-        input_data = np.array([[temp, pressure, speed]])
-        prediction = model.predict(input_data)[0]
+        # ✅ Use DataFrame (avoids sklearn warning on Render)
+        input_df = pd.DataFrame([{
+            "Temperature": temp,
+            "Pressure": pressure,
+            "Speed": speed
+        }])
+
+        prediction = model.predict(input_df)[0]
 
         st.markdown("### 🧠 Prediction")
         st.success(f"Detected Defect: **{prediction}**")
@@ -1690,21 +1687,20 @@ elif demo == "🧠 Predict & Explain Defect (XAI)":
         }).sort_values(by="Importance", ascending=False)
 
         st.markdown("### 📊 Feature Influence")
-        st.dataframe(imp_df)
+        st.dataframe(imp_df, use_container_width=True)
 
         # =========================
-        # MODEL-BASED EXPLANATION
+        # AI EXPLANATION
         # =========================
         st.markdown("### 💡 AI Explanation")
 
         mean_vals = X.mean()
-        input_vals = [temp, pressure, speed]
 
         reasons = []
 
-        # Detect deviations
-        for i, f in enumerate(features):
-            diff = input_vals[i] - mean_vals[i]
+        # ✅ Safe feature-based access (NO KeyError ever)
+        for f in features:
+            diff = float(input_df[f].iloc[0]) - float(mean_vals[f])
 
             if abs(diff) > 15:
                 if diff > 0:
@@ -1712,7 +1708,7 @@ elif demo == "🧠 Predict & Explain Defect (XAI)":
                 else:
                     reasons.append(f"{f.lower()} is lower than normal")
 
-        # Ensure multi-feature explanation
+        # Ensure at least 2 reasons
         if len(reasons) < 2:
             sorted_idx = np.argsort(importance)[::-1]
             for idx in sorted_idx:
@@ -1721,7 +1717,6 @@ elif demo == "🧠 Predict & Explain Defect (XAI)":
                 if len(reasons) >= 2:
                     break
 
-        # Defect-specific interpretation
         impact_map = {
             "Crack": "This combination increases the risk of structural cracks.",
             "Scratch": "This may result in surface damage during processing.",
@@ -1734,7 +1729,117 @@ elif demo == "🧠 Predict & Explain Defect (XAI)":
             "The model predicted this defect because "
             + ", ".join(reasons[:3])
             + ". "
-            + impact_map.get(prediction)
+            + impact_map.get(prediction, "")
         )
 
         st.info(explanation_text)
+
+elif demo == "🖼️ Fault Detection from Image (LLM)":
+
+    import streamlit as st
+    import base64
+    from langchain_openai import ChatOpenAI
+    from langchain_core.prompts import ChatPromptTemplate
+
+    st.markdown("## 🖼️ Fault Detection from Image (AI Vision)")
+    st.markdown("---")
+
+    # =========================
+    # 🔐 API KEY INPUT
+    # =========================
+    api_key = st.text_input("🔑 Enter OpenAI API Key", type="password")
+
+    if not api_key:
+        st.warning("⚠️ Please enter your OpenAI API Key to continue.")
+        st.stop()   # ✅ prevents execution below
+
+    # =========================
+    # IMAGE ENCODER
+    # =========================
+    def encode_image(img):
+        return base64.b64encode(img.read()).decode()
+
+    # =========================
+    # MODEL INIT (SAFE)
+    # =========================
+    try:
+        llm = ChatOpenAI(
+            model="gpt-4o",
+            api_key=api_key
+        )
+    except Exception as e:
+        st.error(f"❌ Model initialization failed: {e}")
+        st.stop()
+
+    # =========================
+    # UI INPUT
+    # =========================
+    st.subheader("📤 Upload Image")
+
+    image_file = st.file_uploader(
+        "Upload Machine / Device / Circuit Image",
+        ["png", "jpg", "jpeg"]
+    )
+
+    equipment = st.text_input("Equipment / Device Name")
+
+    expected_state = st.selectbox(
+        "Expected Operating Condition",
+        ["Normal", "Running", "Idle", "Unknown"]
+    )
+
+    observed_issue = st.text_input("Observed Issue (optional)")
+
+    # =========================
+    # RUN ANALYSIS
+    # =========================
+    if image_file and equipment:
+
+        image = encode_image(image_file)
+
+        prompt = ChatPromptTemplate.from_messages([
+            ("system",
+             "You are a technical inspection assistant specialized in visual fault detection."),
+
+            ("human", [
+                {
+                    "type": "text",
+                    "text": (
+                        "User-provided information:\n"
+                        "- Equipment / Device: {equipment}\n"
+                        "- Expected operating condition: {expected_state}\n"
+                        "- Observed issue (if any): {observed_issue}\n\n"
+                        "Tasks:\n"
+                        "1. Identify what machine, device, or system is visible\n"
+                        "2. Detect visible faults or abnormalities\n"
+                        "3. Compare with expected condition\n"
+                        "4. Classify severity: Low / Medium / High\n"
+                        "5. Suggest corrective action\n\n"
+                        "Only use visual evidence."
+                    )
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{image}"
+                    }
+                }
+            ])
+        ])
+
+        chain = prompt | llm
+
+        try:
+            with st.spinner("🔍 Analyzing image..."):
+                response = chain.invoke({
+                    "equipment": equipment,
+                    "expected_state": expected_state,
+                    "observed_issue": observed_issue or "Not provided"
+                })
+
+            st.subheader("📊 Fault Analysis Result")
+            st.success("✅ Analysis Completed")
+            st.write(response.content)
+
+        except Exception as e:
+            st.error(f"❌ Error during analysis: {e}")
