@@ -1738,7 +1738,14 @@ elif demo == "🖼️ Fault Detection from Image (LLM)":
 
     import streamlit as st
     import base64
+    import sys
     from openai import OpenAI
+
+    # ✅ Force UTF-8 (important for Render)
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except:
+        pass
 
     st.markdown("## 🖼️ Fault Detection from Image (AI Vision)")
     st.markdown("---")
@@ -1746,10 +1753,10 @@ elif demo == "🖼️ Fault Detection from Image (LLM)":
     # =========================
     # 🔐 API KEY INPUT
     # =========================
-    api_key = st.text_input("🔑 Enter OpenAI API Key", type="password")
+    api_key = st.text_input("Enter OpenAI API Key", type="password")
 
     if not api_key:
-        st.warning("⚠️ Please enter your OpenAI API Key to continue.")
+        st.warning("Please enter your OpenAI API key to continue.")
         st.stop()
 
     # =========================
@@ -1758,7 +1765,7 @@ elif demo == "🖼️ Fault Detection from Image (LLM)":
     try:
         client = OpenAI(api_key=api_key)
     except Exception as e:
-        st.error(f"❌ API Initialization Error: {e}")
+        st.error(f"API Initialization Error: {e}")
         st.stop()
 
     # =========================
@@ -1770,7 +1777,7 @@ elif demo == "🖼️ Fault Detection from Image (LLM)":
     # =========================
     # UI INPUT
     # =========================
-    st.subheader("📤 Upload Image")
+    st.subheader("Upload Image")
 
     image_file = st.file_uploader(
         "Upload Machine / Device / Circuit Image",
@@ -1791,17 +1798,19 @@ elif demo == "🖼️ Fault Detection from Image (LLM)":
     # =========================
     if image_file and equipment:
 
+        st.image(image_file, caption="Uploaded Image", use_container_width=True)
+
         image_base64 = encode_image(image_file)
 
         try:
-            with st.spinner("🔍 Analyzing image..."):
+            with st.spinner("Analyzing image..."):
 
                 response = client.chat.completions.create(
                     model="gpt-4o",
                     messages=[
                         {
                             "role": "system",
-                            "content": "You are a technical inspection assistant specialized in visual fault detection."
+                            "content": "You are a technical inspection assistant."
                         },
                         {
                             "role": "user",
@@ -1812,13 +1821,11 @@ elif demo == "🖼️ Fault Detection from Image (LLM)":
                                         f"Equipment: {equipment}\n"
                                         f"Expected Condition: {expected_state}\n"
                                         f"Observed Issue: {observed_issue or 'Not provided'}\n\n"
-                                        "Tasks:\n"
-                                        "1. Identify the device\n"
-                                        "2. Detect visible faults or abnormalities\n"
-                                        "3. Compare with expected condition\n"
-                                        "4. Classify severity (Low / Medium / High)\n"
-                                        "5. Suggest corrective action\n\n"
-                                        "Only use visual evidence."
+                                        "Give output strictly in this format:\n\n"
+                                        "Device Identified:\n"
+                                        "Fault Detected:\n"
+                                        "Severity (Low/Medium/High):\n"
+                                        "Recommended Action:\n"
                                     )
                                 },
                                 {
@@ -1832,9 +1839,35 @@ elif demo == "🖼️ Fault Detection from Image (LLM)":
                     ]
                 )
 
-            st.subheader("📊 Fault Analysis Result")
-            st.success("✅ Analysis Completed")
-            st.write(response.choices[0].message.content)
+            # =========================
+            # SAFE OUTPUT HANDLING
+            # =========================
+            result = response.choices[0].message.content
+            safe_result = result.encode("utf-8", "ignore").decode("utf-8")
+
+            # =========================
+            # DISPLAY OUTPUT NICELY
+            # =========================
+            st.subheader("Analysis Result")
+
+            lines = safe_result.split("\n")
+
+            device, fault, severity, action = "", "", "", ""
+
+            for line in lines:
+                if "Device Identified" in line:
+                    device = line
+                elif "Fault Detected" in line:
+                    fault = line
+                elif "Severity" in line:
+                    severity = line
+                elif "Recommended Action" in line:
+                    action = line
+
+            st.write("**Device:**", device.replace("Device Identified:", "").strip())
+            st.write("**Fault:**", fault.replace("Fault Detected:", "").strip())
+            st.write("**Severity:**", severity.replace("Severity (Low/Medium/High):", "").strip())
+            st.write("**Action:**", action.replace("Recommended Action:", "").strip())
 
         except Exception as e:
-            st.error(f"❌ Error during analysis: {e}")
+            st.error(f"Error during analysis: {e}")
