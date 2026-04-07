@@ -24,7 +24,8 @@ demo = st.sidebar.radio(
         "🧹 Data Cleaning Pipeline",
         "🔧 Predict Equipment Failure",
         "⚡ Energy Consumption Forecasting",
-        "⚙️ Device State Classification"
+        "⚙️ Device State Classification",
+        "🚨 Anomaly Detection (AIoT)"
     ]
 )
 
@@ -1490,6 +1491,123 @@ elif demo == "⚙️ Device State Classification":
                     st.success("🟢 Normal Operation")
                 else:
                     st.info("⚪ Idle State")
+
+            st.markdown("---")
+
+            st.subheader("📊 Monitoring History")
+            st.dataframe(pd.DataFrame(st.session_state.data).tail(6))
+
+        time.sleep(1)
+
+elif demo == "🚨 Anomaly Detection (AIoT)":
+
+    import streamlit as st
+    import pandas as pd
+    import numpy as np
+    import random
+    import time
+    from sklearn.ensemble import IsolationForest
+
+    st.markdown("## 🚨 Anomaly Detection (AIoT - No Labels)")
+
+    st.write("Detecting abnormal machine behavior using unsupervised learning")
+
+    st.markdown("---")
+
+    # =========================
+    # TRAIN ON NORMAL DATA ONLY
+    # =========================
+    normal_data = pd.DataFrame({
+        "Temperature": np.random.normal(60, 5, 100),
+        "Vibration": np.random.normal(30, 5, 100),
+        "Energy": np.random.normal(200, 20, 100),
+        "Speed": np.random.normal(1500, 100, 100)
+    })
+
+    model = IsolationForest(contamination=0.1)
+    model.fit(normal_data)
+
+    st.success("✅ Model Trained on Normal Operating Data")
+
+    # =========================
+    # STATE
+    # =========================
+    if "data" not in st.session_state:
+        st.session_state.data = []
+
+    if "running" not in st.session_state:
+        st.session_state.running = False
+
+    col1, col2 = st.columns(2)
+
+    if col1.button("▶ Start Monitoring"):
+        st.session_state.running = True
+
+    if col2.button("⏹ Stop"):
+        st.session_state.running = False
+
+    placeholder = st.empty()
+
+    # =========================
+    # LOOP
+    # =========================
+    while st.session_state.running:
+
+        # 90% normal, 10% anomaly
+        if random.random() < 0.9:
+            temp = random.normalvariate(60, 5)
+            vib = random.normalvariate(30, 5)
+            energy = random.normalvariate(200, 20)
+            speed = random.normalvariate(1500, 100)
+        else:
+            temp = random.uniform(80, 100)
+            vib = random.uniform(50, 80)
+            energy = random.uniform(300, 400)
+            speed = random.uniform(1000, 2000)
+
+        input_data = np.array([[temp, vib, energy, speed]])
+
+        prediction = model.predict(input_data)[0]  # -1 anomaly, 1 normal
+        score = model.decision_function(input_data)[0]
+
+        if prediction == -1:
+            result = "🚨 Anomaly Detected"
+        else:
+            result = "✅ Normal"
+
+        # Store
+        st.session_state.data.append({
+            "Temp": round(temp,2),
+            "Vibration": round(vib,2),
+            "Energy": round(energy,2),
+            "Speed": round(speed,2),
+            "Status": result
+        })
+
+        # =========================
+        # UI
+        # =========================
+        with placeholder.container():
+
+            colA, colB = st.columns(2)
+
+            with colA:
+                st.subheader("📡 Sensor Data")
+                st.metric("Temp", round(temp,2))
+                st.metric("Vibration", round(vib,2))
+                st.metric("Energy", round(energy,2))
+                st.metric("Speed", round(speed,2))
+
+            with colB:
+                st.subheader("🧠 AI Detection")
+                st.write(result)
+
+                if prediction == -1:
+                    st.error("🔴 Abnormal Behavior Detected!")
+                else:
+                    st.success("🟢 Machine Operating Normally")
+
+                st.write(f"Anomaly Score: {round(score,3)}")
 
             st.markdown("---")
 
