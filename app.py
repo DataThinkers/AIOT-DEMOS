@@ -21,7 +21,8 @@ demo = st.sidebar.radio(
         "⚡ Edge vs Cloud Decision",
         "🔄 AIoT Data Flow",
         "📊 Batch vs Streaming",
-        "🧹 Data Cleaning Pipeline"
+        "🧹 Data Cleaning Pipeline",
+        "🔧 Predict Equipment Failure"
     ]
 )
 
@@ -1155,3 +1156,131 @@ elif demo == "🧹 Data Cleaning Pipeline":
 🔄 Pipeline Flow:
 Raw → Missing → Outliers → Noise → Error → Reduction → Standardization
 """)
+
+
+elif demo == "🔧 Predict Equipment Failure":
+
+    import streamlit as st
+    import pandas as pd
+    import numpy as np
+    import random
+    import time
+    from sklearn.linear_model import LogisticRegression
+
+    st.markdown("## 🔧 Predict Equipment Failure (Real-World AIoT)")
+
+    st.write("Supervised Learning + Realistic Machine Behavior")
+
+    st.markdown("---")
+
+    # =========================
+    # TRAINING DATA
+    # =========================
+    train_data = pd.DataFrame({
+        "Temperature": [50, 55, 60, 65, 70, 75, 80, 85, 90, 95],
+        "Vibration":  [20, 25, 30, 35, 40, 45, 50, 60, 70, 80],
+        "Label":      [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+    })
+
+    X = train_data[["Temperature", "Vibration"]]
+    y = train_data["Label"]
+
+    model = LogisticRegression()
+    model.fit(X, y)
+
+    st.success("✅ Model Trained on Historical Data")
+
+    # =========================
+    # STATE
+    # =========================
+    if "data" not in st.session_state:
+        st.session_state.data = []
+
+    if "running" not in st.session_state:
+        st.session_state.running = False
+
+    if "drift" not in st.session_state:
+        st.session_state.drift = 0
+
+    col1, col2, col3 = st.columns(3)
+
+    if col1.button("▶ Start Monitoring"):
+        st.session_state.running = True
+
+    if col2.button("⏹ Stop"):
+        st.session_state.running = False
+
+    if col3.button("🔧 Maintenance Reset"):
+        st.session_state.drift = 0
+        st.success("Machine Serviced → Back to Healthy State")
+
+    placeholder = st.empty()
+
+    # =========================
+    # LOOP
+    # =========================
+    while st.session_state.running:
+
+        # Gradual degradation
+        st.session_state.drift += random.uniform(0, 0.4)
+
+        # Mostly normal, sometimes risky
+        if random.random() < 0.9:
+            temp = int(50 + st.session_state.drift + random.randint(-5, 5))
+            vibration = int(20 + st.session_state.drift + random.randint(-5, 5))
+        else:
+            temp = int(75 + st.session_state.drift + random.randint(0, 10))
+            vibration = int(50 + st.session_state.drift + random.randint(0, 10))
+
+        input_data = np.array([[temp, vibration]])
+
+        prediction = model.predict(input_data)[0]
+        prob = model.predict_proba(input_data)[0][1]
+
+        failure_percent = round(prob * 100, 2)
+
+        if prediction == 1:
+            result = "⚠️ Failure Likely"
+        else:
+            result = "✅ Healthy"
+
+        # Store data
+        st.session_state.data.append({
+            "Temperature": temp,
+            "Vibration": vibration,
+            "Failure %": failure_percent,
+            "Prediction": result
+        })
+
+        # =========================
+        # UI
+        # =========================
+        with placeholder.container():
+
+            colA, colB = st.columns(2)
+
+            with colA:
+                st.subheader("📡 Sensor Data")
+                st.metric("Temperature", temp)
+                st.metric("Vibration", vibration)
+
+            with colB:
+                st.subheader("🧠 AI Prediction")
+                st.write(result)
+
+                st.write(f"Failure Probability: {failure_percent}%")
+                st.progress(prob)
+
+                if failure_percent > 70:
+                    st.error("🔴 High Risk - Immediate Action Required")
+                elif failure_percent > 40:
+                    st.warning("🟠 Moderate Risk - Monitor Closely")
+                else:
+                    st.success("🟢 Low Risk - Normal Operation")
+
+            st.markdown("---")
+
+            st.subheader("📊 Monitoring History")
+            st.dataframe(pd.DataFrame(st.session_state.data).tail(6))
+
+        time.sleep(1)
