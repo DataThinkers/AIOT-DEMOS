@@ -23,7 +23,8 @@ demo = st.sidebar.radio(
         "📊 Batch vs Streaming",
         "🧹 Data Cleaning Pipeline",
         "🔧 Predict Equipment Failure",
-        "⚡ Energy Consumption Forecasting"
+        "⚡ Energy Consumption Forecasting",
+        "⚙️ Device State Classification"
     ]
 )
 
@@ -1382,6 +1383,117 @@ elif demo == "⚡ Energy Consumption Forecasting":
             st.markdown("---")
 
             st.subheader("📊 Forecast History")
+            st.dataframe(pd.DataFrame(st.session_state.data).tail(6))
+
+        time.sleep(1)
+
+elif demo == "⚙️ Device State Classification":
+
+    import streamlit as st
+    import pandas as pd
+    import numpy as np
+    import random
+    import time
+    from sklearn.ensemble import RandomForestClassifier
+
+    st.markdown("## ⚙️ Device State Classification (AIoT)")
+
+    st.write("Classifying device state using sensor data")
+
+    st.markdown("---")
+
+    # =========================
+    # TRAINING DATA (LABELED)
+    # =========================
+    train_data = pd.DataFrame({
+        "Temperature": [30, 35, 40, 50, 55, 60, 70, 80, 90],
+        "Vibration":  [5, 10, 15, 20, 30, 40, 50, 60, 70],
+        "State": [
+            "Idle", "Idle", "Idle",
+            "Normal", "Normal", "Normal",
+            "Faulty", "Faulty", "Faulty"
+        ]
+    })
+
+    X = train_data[["Temperature", "Vibration"]]
+    y = train_data["State"]
+
+    model = RandomForestClassifier()
+    model.fit(X, y)
+
+    st.success("✅ Model Trained on Labeled Data")
+
+    # =========================
+    # STATE
+    # =========================
+    if "data" not in st.session_state:
+        st.session_state.data = []
+
+    if "running" not in st.session_state:
+        st.session_state.running = False
+
+    col1, col2 = st.columns(2)
+
+    if col1.button("▶ Start Monitoring"):
+        st.session_state.running = True
+
+    if col2.button("⏹ Stop"):
+        st.session_state.running = False
+
+    placeholder = st.empty()
+
+    # =========================
+    # LOOP
+    # =========================
+    while st.session_state.running:
+
+        # Simulated sensor values
+        temp = random.randint(25, 95)
+        vibration = random.randint(5, 70)
+
+        input_data = np.array([[temp, vibration]])
+
+        prediction = model.predict(input_data)[0]
+        probs = model.predict_proba(input_data)[0]
+
+        confidence = round(max(probs) * 100, 2)
+
+        # Store
+        st.session_state.data.append({
+            "Temperature": temp,
+            "Vibration": vibration,
+            "State": prediction,
+            "Confidence %": confidence
+        })
+
+        # =========================
+        # UI
+        # =========================
+        with placeholder.container():
+
+            colA, colB = st.columns(2)
+
+            with colA:
+                st.subheader("📡 Sensor Data")
+                st.metric("Temperature", temp)
+                st.metric("Vibration", vibration)
+
+            with colB:
+                st.subheader("🧠 Device State")
+
+                st.write(f"State: **{prediction}**")
+                st.write(f"Confidence: {confidence}%")
+
+                if prediction == "Faulty":
+                    st.error("🔴 Fault Detected")
+                elif prediction == "Normal":
+                    st.success("🟢 Normal Operation")
+                else:
+                    st.info("⚪ Idle State")
+
+            st.markdown("---")
+
+            st.subheader("📊 Monitoring History")
             st.dataframe(pd.DataFrame(st.session_state.data).tail(6))
 
         time.sleep(1)
